@@ -18,6 +18,7 @@ import {
   Loader2,
   Play,
   Printer,
+  Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -34,6 +35,7 @@ import { synthesize } from "@/lib/agents/synthesizer";
 import { simulateImpact } from "@/lib/impact";
 import { saveDecision } from "@/lib/server/analysis";
 import { getMyProfile } from "@/lib/server/profile";
+import { generateGrokMemo } from "@/lib/server/ask";
 
 import { useDesk } from "@/store/desk";
 
@@ -1614,6 +1616,8 @@ function MemoCard({
   ) => void;
   onCite: (c: Citation) => void;
 }) {
+  const [grokMemo, setGrokMemo] = useState<string | null>(null);
+  const [isGeneratingGrok, setIsGeneratingGrok] = useState(false);
 
   return (
 

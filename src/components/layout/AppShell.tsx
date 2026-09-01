@@ -1,7 +1,9 @@
+import { useEffect, useState } from "react";
 import { Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { motion } from "motion/react";
 import { SignedIn, SignedOut, UserButton } from "@/lib/auth/gates";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
+import { checkGrokStatus } from "@/lib/server/grok";
 import { cn } from "@/lib/utils";
 
 import {
@@ -11,6 +13,7 @@ import {
   ScrollText,
   Sunrise,
   Activity,
+  Sparkles,
 } from "lucide-react";
 
 const NAV = [
@@ -47,6 +50,13 @@ export function AppShell() {
   });
 
   const { user, isPending } = useCurrentUserState();
+  const [grokOnline, setGrokOnline] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    checkGrokStatus()
+      .then((s) => setGrokOnline(s.configured))
+      .catch(() => setGrokOnline(false));
+  }, [pathname]);
 
   return (
     <div className="app-shell min-h-dvh bg-bg text-fg">
@@ -207,6 +217,22 @@ export function AppShell() {
               ================================================= */}
 
           <div className="flex items-center gap-2">
+
+            {/* GROK AI STATUS */}
+            {grokOnline !== null && (
+              <div
+                className={cn(
+                  "hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono border",
+                  grokOnline
+                    ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
+                    : "bg-surface-2 text-muted border-border"
+                )}
+                title={grokOnline ? "Grok 4.5 AI is active via .env" : "Grok AI offline — add GROK_API_KEY in .env"}
+              >
+                <Sparkles className={cn("size-3", grokOnline ? "text-emerald-400 animate-pulse" : "text-muted")} />
+                <span>{grokOnline ? "GROK LIVE" : "GROK (OFFLINE)"}</span>
+              </div>
+            )}
 
             {/* LIVE STATUS */}
 

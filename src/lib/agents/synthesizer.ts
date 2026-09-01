@@ -105,7 +105,7 @@ export function synthesize(
 
   let conf = valid.reduce((s, a) => s + a.confidence, 0) / valid.length;
   const signs = valid.map((a) => (a.score > 0.15 ? 1 : a.score < -0.15 ? -1 : 0));
-  const agreement = Math.abs(signs.reduce((s, x) => s + x, 0)) / (signs.length || 1);
+  const agreement = Math.abs(signs.reduce((s: number, x: number) => s + x, 0)) / (signs.length || 1);
   conf = Math.min(0.92, conf * (0.85 + 0.15 * agreement));
   conf = Math.round(conf * 100) / 100;
 
