@@ -10,31 +10,30 @@ try:
     HAS_FPDF = True
 except ImportError:
     HAS_FPDF = False
+    FPDF = object  # placeholder so name exists
 
 EXPORT_DIR = Path(__file__).parent.parent / "logs" / "memos"
 EXPORT_DIR.mkdir(parents=True, exist_ok=True)
 
 
-class MemoPDF(FPDF):
-    def header(self):
-        self.set_font("Helvetica", "B", 14)
-        self.cell(0, 8, "FinAgentVerse Research Memo", ln=True)
-        self.set_font("Helvetica", "", 9)
-        self.cell(0, 5, "Multi-Agent Autonomous Financial Intelligence | HACKVERSE 2026", ln=True)
-        self.ln(3)
-
-    def footer(self):
-        self.set_y(-15)
-        self.set_font("Helvetica", "I", 8)
-        self.cell(0, 10, f"Generated {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')} | Page {self.page_no()}", align="C")
-
-
 def export_research_memo(result: Dict[str, Any], profile_name: str) -> Path:
     if not HAS_FPDF:
-        # Fallback text memo
         path = EXPORT_DIR / f"memo_{result.get('session_id', 'unknown')}.txt"
         path.write_text(_text_memo(result, profile_name))
         return path
+
+    class MemoPDF(FPDF):
+        def header(self):
+            self.set_font("Helvetica", "B", 14)
+            self.cell(0, 8, "FinAgentVerse Research Memo", ln=True)
+            self.set_font("Helvetica", "", 9)
+            self.cell(0, 5, "Multi-Agent Autonomous Financial Intelligence | HACKVERSE 2026", ln=True)
+            self.ln(3)
+
+        def footer(self):
+            self.set_y(-15)
+            self.set_font("Helvetica", "I", 8)
+            self.cell(0, 10, f"Generated {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')} | Page {self.page_no()}", align="C")
 
     pdf = MemoPDF()
     pdf.add_page()
