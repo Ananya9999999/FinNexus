@@ -417,7 +417,7 @@ def about_page():
     arch = ROOT / "docs" / "ARCHITECTURE.md"
     if arch.exists():
         with st.expander("Full architecture"):
-            st.markdown(arch.read_text())
+            st.markdown(arch.read_text(encoding="utf-8", errors="replace"))
 
 
 # ═══════════════════════════════════════════════════════════
