@@ -1,6 +1,6 @@
 """
-FinAgentVerse — Premium Multi-Agent Financial Intelligence
-HACKVERSE 2026 | Sleek UI + Motion + Feature-rich
+FinNexus — Multi-Agent Autonomous Financial Intelligence
+HACKVERSE 2026 | Killer UI · 5 Agents + Chair · Zero-lag feel
 """
 
 import streamlit as st
@@ -10,8 +10,6 @@ import plotly.graph_objects as go
 from pathlib import Path
 import sys
 import time
-import requests
-from datetime import datetime
 
 ROOT = Path(__file__).parent
 sys.path.insert(0, str(ROOT))
@@ -23,582 +21,441 @@ from core.market_data import get_watchlist_snapshots, MarketSnapshot
 from core.portfolio_impact import simulate_impact
 from core.pdf_export import export_research_memo
 
-st.set_page_config(
-    page_title="FinAgentVerse",
-    page_icon="◈",
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
+st.set_page_config(page_title="FinNexus", page_icon="◈", layout="wide", initial_sidebar_state="expanded")
 
+# ═══════════════════════════════════════════════════════════
+# PREMIUM CSS — static sidebar, glass, motion, FinNexus brand
+# ═══════════════════════════════════════════════════════════
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap');
 
 html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
+.stApp { background: #07070c; color: #e6edf3; }
 
-.stApp {
-    background: linear-gradient(160deg, #0a0a0f 0%, #12121a 40%, #0d1117 100%);
-    color: #e6edf3;
-}
+#MainMenu, footer, header, .stDeployButton { display: none !important; visibility: hidden !important; }
 
-#MainMenu, footer, header {visibility: hidden;}
-.stDeployButton {display: none;}
-
+/* ── STATIC SIDEBAR ── */
 section[data-testid="stSidebar"] {
-    background: linear-gradient(180deg, #0d0d14 0%, #111118 100%);
-    border-right: 1px solid rgba(124, 77, 255, 0.15);
+    background: #0b0b12 !important;
+    border-right: 1px solid rgba(99, 102, 241, 0.2) !important;
+    min-width: 260px !important;
 }
-section[data-testid="stSidebar"] * {color: #c9d1d9 !important;}
+section[data-testid="stSidebar"] > div { background: #0b0b12 !important; }
+section[data-testid="stSidebar"] * { color: #c4c4d4 !important; }
+section[data-testid="stSidebar"] .stRadio label {
+    padding: 0.55rem 0.85rem !important;
+    border-radius: 10px !important;
+    margin: 2px 0 !important;
+    transition: all 0.15s ease !important;
+}
+section[data-testid="stSidebar"] .stRadio label:hover {
+    background: rgba(99, 102, 241, 0.12) !important;
+}
+div[data-testid="stSidebarNav"] { display: none; }
 
+/* Brand */
+.fnx-logo {
+    font-size: 1.55rem; font-weight: 800; letter-spacing: -0.03em;
+    background: linear-gradient(120deg, #818cf8, #22d3ee);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.fnx-tag { font-size: 0.72rem; color: #64748b; letter-spacing: 0.04em; text-transform: uppercase; }
+
+/* Glass */
 .glass {
-    background: rgba(22, 27, 34, 0.7);
-    backdrop-filter: blur(16px);
-    border: 1px solid rgba(124, 77, 255, 0.18);
-    border-radius: 16px;
-    padding: 1.25rem 1.5rem;
-    margin-bottom: 1rem;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.35);
-    transition: transform 0.25s ease, box-shadow 0.25s ease;
-}
-.glass:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 12px 40px rgba(124, 77, 255, 0.12);
+    background: rgba(15, 15, 25, 0.75);
+    border: 1px solid rgba(99, 102, 241, 0.15);
+    border-radius: 14px; padding: 1.1rem 1.3rem;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.4);
 }
 
-.badge-buy {
-    display: inline-block;
-    background: linear-gradient(135deg, #00c853, #00e676);
-    color: #000; font-weight: 800; font-size: 1.6rem;
-    padding: 0.4rem 1.4rem; border-radius: 12px;
-    animation: pulse-green 2s infinite;
+/* Signal badges */
+.badge {
+    display: inline-block; font-weight: 800; font-size: 1.45rem;
+    padding: 0.35rem 1.25rem; border-radius: 10px; letter-spacing: 0.04em;
 }
-.badge-sell {
-    display: inline-block;
-    background: linear-gradient(135deg, #ff1744, #ff5252);
-    color: #fff; font-weight: 800; font-size: 1.6rem;
-    padding: 0.4rem 1.4rem; border-radius: 12px;
-    animation: pulse-red 2s infinite;
-}
-.badge-hold {
-    display: inline-block;
-    background: linear-gradient(135deg, #ffab00, #ffd740);
-    color: #000; font-weight: 800; font-size: 1.6rem;
-    padding: 0.4rem 1.4rem; border-radius: 12px;
-}
+.badge-buy { background: linear-gradient(135deg,#059669,#34d399); color:#022c22; box-shadow: 0 0 24px rgba(52,211,153,0.35); }
+.badge-sell { background: linear-gradient(135deg,#dc2626,#f87171); color:#fff; box-shadow: 0 0 24px rgba(248,113,113,0.35); }
+.badge-hold { background: linear-gradient(135deg,#d97706,#fbbf24); color:#1c1000; }
 
-@keyframes pulse-green {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(0, 200, 83, 0.4); }
-    50% { box-shadow: 0 0 0 12px rgba(0, 200, 83, 0); }
+/* Agent cards */
+.acard {
+    background: #12121c; border-radius: 12px; border-left: 3px solid #6366f1;
+    padding: 0.9rem 1rem; height: 100%; transition: border-color 0.2s;
 }
-@keyframes pulse-red {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(255, 23, 68, 0.4); }
-    50% { box-shadow: 0 0 0 12px rgba(255, 23, 68, 0); }
-}
+.acard:hover { border-left-color: #a5b4fc; }
+.acard-conflict { border-left-color: #f97316 !important; background: #1a1210 !important; }
 
-.agent-card {
-    background: rgba(30, 30, 46, 0.8);
-    border-radius: 14px;
-    border-left: 4px solid #7c4dff;
-    padding: 1rem 1.2rem;
-    height: 100%;
-    transition: all 0.3s ease;
-}
-.agent-card:hover {
-    border-left-color: #b388ff;
-    background: rgba(40, 40, 60, 0.9);
-}
-.agent-conflict {
-    border-left-color: #ff6f00 !important;
-    background: rgba(62, 39, 35, 0.5) !important;
-}
-
+/* Metrics */
 div[data-testid="stMetric"] {
-    background: rgba(22, 27, 34, 0.6);
-    border: 1px solid rgba(124, 77, 255, 0.12);
-    border-radius: 12px;
-    padding: 0.8rem 1rem;
+    background: #12121c; border: 1px solid rgba(99,102,241,0.1);
+    border-radius: 12px; padding: 0.7rem 0.9rem;
 }
-div[data-testid="stMetricValue"] {
-    font-family: 'JetBrains Mono', monospace;
-    font-weight: 600;
-}
+div[data-testid="stMetricValue"] { font-family: 'JetBrains Mono', monospace; font-weight: 600; font-size: 1.25rem !important; }
 
+/* Buttons */
 .stButton > button {
-    border-radius: 10px;
-    font-weight: 600;
-    transition: all 0.2s ease;
-    border: none;
+    border-radius: 10px !important; font-weight: 600 !important;
+    border: none !important; transition: all 0.15s ease !important;
 }
 .stButton > button[kind="primary"] {
-    background: linear-gradient(135deg, #7c4dff, #536dfe);
-    color: white;
+    background: linear-gradient(135deg, #6366f1, #4f46e5) !important; color: #fff !important;
 }
 .stButton > button[kind="primary"]:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 6px 20px rgba(124, 77, 255, 0.4);
+    box-shadow: 0 4px 18px rgba(99,102,241,0.45) !important; transform: translateY(-1px);
 }
 
-.logo {
-    font-size: 1.8rem;
-    font-weight: 800;
-    background: linear-gradient(135deg, #7c4dff, #00e5ff);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+/* Inputs */
+.stTextInput input, .stSelectbox div[data-baseweb="select"] {
+    background: #12121c !important; border: 1px solid rgba(99,102,241,0.2) !important;
+    border-radius: 10px !important; color: #e6edf3 !important;
 }
 
-.citation {
-    font-size: 0.8rem;
-    color: #8b949e;
-    border-left: 2px solid #30363d;
-    padding-left: 0.6rem;
-    margin: 0.3rem 0;
-}
-
-.hero { text-align: center; padding: 3rem 1rem 2rem; }
+/* Hero */
+.hero { text-align: center; padding: 2.5rem 1rem 1.5rem; }
 .hero h1 {
-    font-size: 3.2rem; font-weight: 800;
-    background: linear-gradient(135deg, #fff 0%, #7c4dff 50%, #00e5ff 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    margin-bottom: 0.5rem;
+    font-size: 2.8rem; font-weight: 800; letter-spacing: -0.03em; margin-bottom: 0.4rem;
+    background: linear-gradient(120deg, #f1f5f9 10%, #818cf8 50%, #22d3ee 90%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
 }
-.hero p { font-size: 1.15rem; color: #8b949e; max-width: 560px; margin: 0 auto; }
+.hero p { color: #94a3b8; font-size: 1.05rem; max-width: 520px; margin: 0 auto; }
 
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: #0d1117; }
-::-webkit-scrollbar-thumb { background: #30363d; border-radius: 3px; }
+.citation { font-size: 0.78rem; color: #64748b; border-left: 2px solid #334155; padding-left: 0.5rem; margin: 0.25rem 0; }
+
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: #07070c; }
+::-webkit-scrollbar-thumb { background: #1e1e2e; border-radius: 3px; }
 </style>
 """, unsafe_allow_html=True)
 
 
+# ═══════════════════════════════════════════════════════════
+# LOGIN — button only, no Enter dependency
+# ═══════════════════════════════════════════════════════════
 def login_page():
     st.markdown("""
     <div class="hero">
-        <h1>FinAgentVerse</h1>
-        <p>Multi-Agent Autonomous Financial Intelligence for Retail Investors.<br>
-        Institutional-grade research. Personalised. Explainable. In under 60 seconds.</p>
+        <h1>FinNexus</h1>
+        <p>Five specialized agents. One Chair. Personalised, explainable intelligence for retail investors — in seconds.</p>
     </div>
     """, unsafe_allow_html=True)
 
-    col1, col2, col3 = st.columns([1, 1.4, 1])
-    with col2:
-        tab_login, tab_reg = st.tabs(["Login", "Create Account"])
-        with tab_login:
-            username = st.text_input("Username", placeholder="riya")
-            password = st.text_input("Password", type="password", placeholder="••••••••")
-            if st.button("Enter FinAgentVerse", type="primary", use_container_width=True):
-                user = authenticate(username, password)
-                if user:
-                    st.session_state["user"] = user
-                    st.balloons()
-                    time.sleep(0.5)
-                    st.rerun()
+    _, mid, _ = st.columns([1, 1.35, 1])
+    with mid:
+        tab1, tab2 = st.tabs(["Sign In", "Create Account"])
+        with tab1:
+            u = st.text_input("Username", key="lu", placeholder="riya", autocomplete="username")
+            p = st.text_input("Password", key="lp", type="password", placeholder="••••••••", autocomplete="current-password")
+            # Pure button trigger — no form Enter issues
+            clicked = st.button("Enter FinNexus", type="primary", use_container_width=True, key="login_btn")
+            if clicked:
+                if not u or not p:
+                    st.warning("Enter username and password")
                 else:
-                    st.error("Invalid credentials")
-            st.caption("Demo accounts")
-            for acc in list_demo_accounts():
-                st.code(acc, language=None)
-        with tab_reg:
-            nu = st.text_input("Username", key="reg_u")
-            nn = st.text_input("Display Name", key="reg_n")
-            np_ = st.text_input("Password", type="password", key="reg_p")
-            if st.button("Create Account", use_container_width=True):
-                ok, msg = register_user(nu, np_, nn)
+                    user = authenticate(u.strip(), p)
+                    if user:
+                        st.session_state["user"] = user
+                        st.rerun()
+                    else:
+                        st.error("Invalid credentials")
+            st.caption("Demo · riya / arjun / priya  →  demo123  ·  judge → hackverse")
+        with tab2:
+            nu = st.text_input("Username", key="ru")
+            nn = st.text_input("Display name", key="rn")
+            np = st.text_input("Password", key="rp", type="password")
+            if st.button("Create account", use_container_width=True, key="reg_btn"):
+                ok, msg = register_user(nu, np, nn)
                 st.success(msg) if ok else st.error(msg)
 
     st.markdown("---")
-    m1, m2, m3, m4 = st.columns(4)
-    m1.metric("Agents", "3 Parallel")
-    m2.metric("Latency", "< 4s")
-    m3.metric("RAG Sources", "SEBI + Earnings")
-    m4.metric("Personalisation", "Full Profile")
+    a,b,c,d,e = st.columns(5)
+    a.metric("Agents", "5 + Chair")
+    b.metric("Parallel", "Yes")
+    c.metric("RAG", "SEBI + Earnings")
+    d.metric("Personalised", "Full profile")
+    e.metric("Explainable", "Full chain")
 
 
-def portfolio_editor(profile: UserProfile):
-    st.markdown("## 💼 Portfolio Command Center")
-    c1, c2, c3, c4 = st.columns(4)
-    with c1:
-        risk = st.selectbox("Risk Tolerance", ["conservative", "moderate", "aggressive"],
-                            index=["conservative", "moderate", "aggressive"].index(profile.risk_tolerance))
-    with c2:
-        horizon = st.selectbox("Horizon", ["short", "medium", "long"],
-                               index=["short", "medium", "long"].index(profile.investment_horizon))
-    with c3:
-        max_pos = st.slider("Max Position %", 5.0, 30.0, float(profile.max_position_pct), 1.0)
-    with c4:
-        cash = st.slider("Cash %", 0.0, 100.0, float(profile.cash_pct), 1.0)
+# ═══════════════════════════════════════════════════════════
+# PORTFOLIO
+# ═══════════════════════════════════════════════════════════
+def portfolio_page(profile: UserProfile):
+    st.markdown("### Portfolio Command Center")
+    c1,c2,c3,c4 = st.columns(4)
+    risk = c1.selectbox("Risk", ["conservative","moderate","aggressive"], index=["conservative","moderate","aggressive"].index(profile.risk_tolerance))
+    horizon = c2.selectbox("Horizon", ["short","medium","long"], index=["short","medium","long"].index(profile.investment_horizon))
+    max_pos = c3.slider("Max position %", 5.0, 30.0, float(profile.max_position_pct), 1.0)
+    cash = c4.slider("Cash %", 0.0, 100.0, float(profile.cash_pct), 1.0)
+    flags = st.multiselect("Behavioral flags", ["loss_averse","fomo_prone","momentum_chaser","prefers_dividends","balanced"], default=profile.behavioral_flags)
 
-    flags = st.multiselect("Behavioral Flags",
-                           ["loss_averse", "fomo_prone", "momentum_chaser", "prefers_dividends", "balanced"],
-                           default=profile.behavioral_flags)
-
-    left, right = st.columns([1.3, 1])
+    left, right = st.columns([1.35, 1])
     with left:
-        st.markdown("#### Holdings")
         if profile.holdings:
-            rows = [{"Ticker": t, "Qty": h.get("quantity", 0), "Avg ₹": h.get("avg_price", 0),
-                     "Weight %": h.get("weight_pct", 0)} for t, h in profile.holdings.items()]
+            rows = [{"Ticker":t,"Qty":h.get("quantity",0),"Avg ₹":h.get("avg_price",0),"Weight %":h.get("weight_pct",0)} for t,h in profile.holdings.items()]
             st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
         else:
-            st.info("Empty portfolio — add your first holding.")
-
-        st.markdown("#### Add / Update")
-        a1, a2, a3, a4 = st.columns(4)
-        with a1: nt = st.text_input("Ticker", placeholder="RELIANCE")
-        with a2: nq = st.number_input("Qty", 0.0, value=10.0)
-        with a3: na = st.number_input("Avg Price", 0.0, value=1000.0)
-        with a4: nw = st.number_input("Weight %", 0.0, 50.0, value=10.0)
-        b1, b2 = st.columns(2)
-        with b1:
-            if st.button("➕ Save Holding", type="primary", use_container_width=True) and nt.strip():
-                profile.add_holding(nt.strip(), nq, na, nw)
-                profile.risk_tolerance, profile.investment_horizon = risk, horizon
-                profile.max_position_pct, profile.behavioral_flags, profile.cash_pct = max_pos, flags, cash
-                update_profile(profile)
-                st.success("Saved")
-                st.rerun()
-        with b2:
-            rem = st.selectbox("Remove", ["—"] + list(profile.holdings.keys()), label_visibility="collapsed")
-            if st.button("🗑 Remove", use_container_width=True) and rem != "—":
-                profile.remove_holding(rem)
-                update_profile(profile)
-                st.rerun()
-
+            st.info("No holdings yet.")
+        a1,a2,a3,a4 = st.columns(4)
+        nt = a1.text_input("Ticker", placeholder="RELIANCE")
+        nq = a2.number_input("Qty", 0.0, value=10.0)
+        na = a3.number_input("Avg ₹", 0.0, value=1000.0)
+        nw = a4.number_input("Weight %", 0.0, 50.0, value=10.0)
+        b1,b2 = st.columns(2)
+        if b1.button("Save holding", type="primary", use_container_width=True) and nt.strip():
+            profile.add_holding(nt.strip(), nq, na, nw)
+            profile.risk_tolerance, profile.investment_horizon = risk, horizon
+            profile.max_position_pct, profile.behavioral_flags, profile.cash_pct = max_pos, flags, cash
+            update_profile(profile); st.rerun()
+        rem = b2.selectbox("Remove", ["—"]+list(profile.holdings.keys()), label_visibility="collapsed")
+        if b2.button("Remove", use_container_width=True) and rem != "—":
+            profile.remove_holding(rem); update_profile(profile); st.rerun()
     with right:
         if profile.holdings or cash > 0:
-            labels = list(profile.holdings.keys()) + (["Cash"] if cash > 0 else [])
-            values = [h.get("weight_pct", 0) for h in profile.holdings.values()] + ([cash] if cash > 0 else [])
-            fig = px.pie(values=values, names=labels, hole=0.55,
-                         color_discrete_sequence=px.colors.sequential.Purples_r)
-            fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                              font_color="#c9d1d9", height=320, margin=dict(t=20, b=20, l=20, r=20),
-                              showlegend=True, legend=dict(orientation="h", y=-0.1))
+            labels = list(profile.holdings.keys()) + (["Cash"] if cash>0 else [])
+            values = [h.get("weight_pct",0) for h in profile.holdings.values()] + ([cash] if cash>0 else [])
+            fig = px.pie(values=values, names=labels, hole=0.58, color_discrete_sequence=px.colors.sequential.Purples_r)
+            fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", font_color="#94a3b8",
+                              height=280, margin=dict(t=10,b=10,l=10,r=10), showlegend=True, legend=dict(orientation="h", y=-0.12))
             st.plotly_chart(fig, use_container_width=True)
         hhi = profile.concentration_hhi()
-        health = max(0, min(100, 100 - hhi * 70 - (5 if cash < 5 else 0)))
-        st.metric("Portfolio Health Score", f"{health:.0f}/100")
-        st.caption(f"HHI: {hhi:.3f} · Cash: {cash:.0f}%")
-
-    if st.button("💾 Save All Profile Settings", type="primary"):
+        health = max(0, min(100, 100 - hhi*70 - (5 if cash<5 else 0)))
+        st.metric("Portfolio Health", f"{health:.0f}/100")
+        st.caption(f"HHI {hhi:.3f} · Cash {cash:.0f}%")
+    if st.button("Save profile settings", type="primary"):
         profile.risk_tolerance, profile.investment_horizon = risk, horizon
         profile.max_position_pct, profile.behavioral_flags, profile.cash_pct = max_pos, flags, cash
-        update_profile(profile)
-        st.success("Profile locked in")
+        update_profile(profile); st.success("Saved")
 
 
-def multi_ticker_view(user_id: str, profile: UserProfile):
-    st.markdown("## 📊 Multi-Ticker Intelligence")
-    default = ",".join((profile.watchlist or ["RELIANCE.NS", "TCS.NS", "HDFCBANK.NS"])[:4])
-    tickers_raw = st.text_input("Tickers (comma separated)", value=default)
-    tickers = [t.strip().upper() for t in tickers_raw.split(",") if t.strip()]
-    tickers = [t + ".NS" if not t.endswith((".NS", ".BO")) else t for t in tickers]
+# ═══════════════════════════════════════════════════════════
+# ANALYZE — zero artificial lag
+# ═══════════════════════════════════════════════════════════
+def analyze_page(user, profile):
+    st.markdown(f'<span class="fnx-logo">FinNexus</span> &nbsp; <span style="color:#64748b">{profile.name} · {profile.risk_tolerance}</span>', unsafe_allow_html=True)
 
-    if st.button("Run Comparison", type="primary") and tickers:
-        results = []
-        progress = st.progress(0, text="Dispatching agents…")
-        for i, t in enumerate(tickers[:5]):
-            progress.progress(i / max(len(tickers), 1), text=f"Analyzing {t}…")
-            results.append(run_pipeline(t, user_id=user_id))
-        progress.progress(1.0, text="Done")
-        time.sleep(0.2)
-        progress.empty()
-
-        rows = []
-        for r in results:
-            syn = r["synthesis"]
-            rows.append({
-                "Ticker": r["ticker"].replace(".NS", ""),
-                "Signal": syn["final_signal"],
-                "Score": syn["score"],
-                "Confidence": f"{syn['confidence']:.0%}",
-                "Position Hint": f"{syn['position_hint_pct']:+.1f}%",
-                "Agreement": f"{syn.get('agreement', 0):.0%}",
-            })
-        st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
-
-        fig = go.Figure(go.Bar(
-            x=[r["ticker"].replace(".NS", "") for r in results],
-            y=[r["synthesis"]["score"] for r in results],
-            marker_color=["#00c853" if s > 0.2 else "#ff1744" if s < -0.2 else "#ffab00"
-                          for s in [r["synthesis"]["score"] for r in results]],
-            text=[r["synthesis"]["final_signal"] for r in results],
-            textposition="auto"
-        ))
-        fig.update_layout(title="Composite Score Comparison", paper_bgcolor="rgba(0,0,0,0)",
-                          plot_bgcolor="rgba(0,0,0,0)", font_color="#c9d1d9", height=340,
-                          yaxis=dict(range=[-1, 1], gridcolor="#21262d"), margin=dict(t=40, b=20))
-        st.plotly_chart(fig, use_container_width=True)
-
-
-def market_pulse():
-    st.markdown("## 🌐 Market Pulse & Retail Risk")
-    c1, c2 = st.columns(2)
-    with c1:
-        st.markdown("""
-        <div class="glass">
-        <h4>SEBI Retail F&O Reality Check</h4>
-        <p><b>89%</b> of retail F&O participants in India lost money (SEBI data).<br>
-        India added <b>130 million</b> new retail investors in four years — 80% under 30.</p>
-        <p style="color:#ffab00">This system closes the infrastructure gap — it does not encourage leverage.</p>
-        </div>
-        """, unsafe_allow_html=True)
-    with c2:
-        st.markdown("""
-        <div class="glass">
-        <h4>System Capabilities</h4>
-        <ul>
-        <li>Parallel multi-perspective research</li>
-        <li>RAG-grounded regulatory & earnings context</li>
-        <li>Risk-profile aware recommendations</li>
-        <li>Full reasoning chain visible</li>
-        <li>Portfolio impact simulation</li>
-        </ul>
-        </div>
-        """, unsafe_allow_html=True)
-
-
-def analyze_page(user: dict, profile: UserProfile):
-    st.markdown(f"""
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem">
-        <div>
-            <span class="logo">FinAgentVerse</span>
-            <span style="color:#8b949e;margin-left:1rem;font-size:0.95rem">
-                {profile.name} · {profile.risk_tolerance} · {profile.investment_horizon} horizon
-            </span>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    wl = profile.watchlist or ["RELIANCE.NS", "TCS.NS", "HDFCBANK.NS", "INFY.NS"]
-    snaps = get_watchlist_snapshots(wl[:5])
+    wl = profile.watchlist or ["RELIANCE.NS","TCS.NS","HDFCBANK.NS","INFY.NS"]
+    snaps = get_watchlist_snapshots(wl[:4])
     cols = st.columns(len(snaps))
-    for i, s in enumerate(snaps):
-        with cols[i]:
-            st.metric(s.ticker.replace(".NS", ""), f"₹{s.last_price:,.1f}", f"{s.change_pct:+.2f}%",
-                      delta_color="normal" if s.change_pct >= 0 else "inverse")
+    for i,s in enumerate(snaps):
+        cols[i].metric(s.ticker.replace(".NS",""), f"₹{s.last_price:,.1f}", f"{s.change_pct:+.2f}%")
 
-    c1, c2, c3, c4, c5 = st.columns([2.2, 1, 1, 1.1, 1])
-    with c1:
-        ticker_input = st.text_input("Ticker", value="RELIANCE.NS", label_visibility="collapsed", placeholder="RELIANCE.NS")
-    with c2:
-        run_btn = st.button("▶  Analyze", type="primary", use_container_width=True)
-    with c3:
-        degraded_btn = st.button("Degraded", use_container_width=True)
-    with c4:
-        whatif = st.selectbox("What-if risk", ["(current)", "conservative", "moderate", "aggressive"], label_visibility="collapsed")
-    with c5:
-        explain_simple = st.checkbox("ELI15", help="Explain like I'm 15")
+    c1,c2,c3,c4 = st.columns([2.4, 1, 1, 1.1])
+    ticker = c1.text_input("Ticker", value="RELIANCE.NS", label_visibility="collapsed", placeholder="RELIANCE.NS")
+    run = c2.button("Analyze", type="primary", use_container_width=True)
+    deg = c3.button("Degraded", use_container_width=True)
+    whatif = c4.selectbox("What-if", ["(current)","conservative","moderate","aggressive"], label_visibility="collapsed")
 
-    if run_btn or degraded_btn or "last_result" in st.session_state:
-        force_deg = degraded_btn
-        if run_btn or degraded_btn:
-            progress_placeholder = st.empty()
-            with progress_placeholder.container():
-                st.markdown("#### Agent Team Deploying")
-                steps = [
-                    ("TechnicalSignalAgent", "Momentum · Volume · RSI/MACD"),
-                    ("FundamentalRAGAgent", "SEBI filings · Earnings transcripts"),
-                    ("SentimentMacroAgent", "Regime · Participation · Macro"),
-                    ("Synthesis Layer", "Risk profile · Behavioral · Concentration"),
-                ]
-                pbar = st.progress(0)
-                status = st.empty()
-                for i, (name, desc) in enumerate(steps):
-                    status.markdown(f"**{name}** — {desc}")
-                    pbar.progress((i + 1) / len(steps))
-                    time.sleep(0.32)
-                status.markdown("**Synthesizing personalised recommendation…**")
-                time.sleep(0.2)
-
-            orig_risk = profile.risk_tolerance
+    if run or deg or "last_result" in st.session_state:
+        if run or deg:
+            status = st.empty()
+            status.caption("Running Momentum · Flow · Filing · Sentiment · Risk in parallel…")
+            orig = profile.risk_tolerance
             if whatif != "(current)":
                 profile.risk_tolerance = whatif
-            result = run_pipeline(ticker_input, user_id=user["username"], force_degraded=force_deg)
-            profile.risk_tolerance = orig_risk
+            result = run_pipeline(ticker, user_id=user["username"], force_degraded=bool(deg))
+            profile.risk_tolerance = orig
             st.session_state["last_result"] = result
-            progress_placeholder.empty()
+            status.empty()
         else:
             result = st.session_state["last_result"]
 
-        snap = result["market_snapshot"]
-        syn = result["synthesis"]
-        agents = result["agent_outputs"]
-        metrics = result["metrics"]
+        snap, syn, agents, metrics = result["market_snapshot"], result["synthesis"], result["agent_outputs"], result["metrics"]
         sig = syn["final_signal"]
+        bc = "badge-buy" if "BUY" in sig else ("badge-sell" if "SELL" in sig else "badge-hold")
 
-        badge_class = "badge-buy" if "BUY" in sig else ("badge-sell" if "SELL" in sig else "badge-hold")
         st.markdown(f"""
-        <div style="text-align:center;margin:1.5rem 0 1rem">
-            <span class="{badge_class}">{sig}</span>
-            <div style="margin-top:0.8rem;font-size:1.1rem;color:#c9d1d9">
-                Confidence <b>{syn['confidence']:.0%}</b> · Score <b>{syn['score']:+.2f}</b> · {snap['ticker']} @ ₹{snap['last_price']}
+        <div style="text-align:center;margin:1.2rem 0 0.8rem">
+            <span class="badge {bc}">{sig}</span>
+            <div style="margin-top:0.55rem;color:#94a3b8;font-size:0.95rem">
+                Confidence <b style="color:#e2e8f0">{syn['confidence']:.0%}</b> · Score <b style="color:#e2e8f0">{syn['score']:+.2f}</b>
+                · {snap['ticker']} @ ₹{snap['last_price']} · {metrics['total_latency_ms']:.0f} ms
             </div>
         </div>
         """, unsafe_allow_html=True)
 
-        rec = syn["recommendation"]
-        if explain_simple:
-            rec = (f"**Simple take:** The agents looked at price action, company filings, and market mood. "
-                   f"For your risk style ({profile.risk_tolerance}), they suggest **{sig.replace('_', ' ').title()}**. "
-                   f"{'Consider a measured add' if 'BUY' in sig else 'Consider reducing or waiting' if 'SELL' in sig else 'No strong reason to change right now'}.")
-        st.markdown(f"<div class='glass' style='font-size:1.05rem'>{rec}</div>", unsafe_allow_html=True)
+        st.markdown(f'<div class="glass">{syn["recommendation"]}</div>', unsafe_allow_html=True)
 
-        k1, k2, k3, k4, k5 = st.columns(5)
-        k1.metric("Position Hint", f"{syn['position_hint_pct']:+.1f}%")
-        k2.metric("Agent Agreement", f"{syn.get('agreement', 0):.0%}")
+        k1,k2,k3,k4,k5 = st.columns(5)
+        k1.metric("Position hint", f"{syn['position_hint_pct']:+.1f}%")
+        k2.metric("Agreement", f"{syn.get('agreement',0):.0%}")
         k3.metric("Latency", f"{metrics['total_latency_ms']:.0f} ms")
-        k4.metric("Data Quality", snap["data_quality"].upper())
-        k5.metric("Conviction", f"{metrics['conviction_score']:.2f}")
+        k4.metric("Data", snap["data_quality"].upper())
+        k5.metric("Agents", f"{metrics['num_agents_succeeded']}/5")
 
-        st.markdown("### 📊 Portfolio Impact")
+        # Impact
+        st.markdown("##### Portfolio impact")
         try:
-            ms = MarketSnapshot(**{k: snap[k] for k in MarketSnapshot.__dataclass_fields__ if k in snap})
-            impact = simulate_impact(profile, ms, syn["final_signal"], syn["position_hint_pct"], syn["confidence"])
-            ic1, ic2, ic3, ic4 = st.columns(4)
-            ic1.metric("Weight", f"{impact['current_weight_pct']}%", f"→ {impact['proposed_weight_pct']}%")
-            ic2.metric("Cash", f"{impact['cash_before']}%", f"→ {impact['cash_after']}%")
-            ic3.metric("HHI", f"{impact['hhi_before']}", f"→ {impact['hhi_after']}")
-            ic4.metric("Risk Score", f"{impact['risk_score_before']}", f"→ {impact['risk_score_after']}")
-            st.info(f"{impact['action']} · {impact['diversification_note']} · Limits: {'✅' if impact['within_limits'] else '⚠️'}")
-        except Exception as e:
-            st.caption(f"Impact: {e}")
+            ms = MarketSnapshot(**{k:snap[k] for k in MarketSnapshot.__dataclass_fields__ if k in snap})
+            imp = simulate_impact(profile, ms, syn["final_signal"], syn["position_hint_pct"], syn["confidence"])
+            i1,i2,i3,i4 = st.columns(4)
+            i1.metric("Weight", f"{imp['current_weight_pct']}%", f"→ {imp['proposed_weight_pct']}%")
+            i2.metric("Cash", f"{imp['cash_before']}%", f"→ {imp['cash_after']}%")
+            i3.metric("HHI", f"{imp['hhi_before']}", f"→ {imp['hhi_after']}")
+            i4.metric("Risk", f"{imp['risk_score_before']}", f"→ {imp['risk_score_after']}")
+            st.caption(f"{imp['action']} · {imp['diversification_note']}")
+        except Exception:
+            pass
 
-        st.markdown("### 🗣️ Agent Debate")
+        # Agent grid
+        st.markdown("##### Agent desk")
         scores = [a["score"] for a in agents]
-        signals = [a["signal"] for a in agents]
-        has_conflict = (len(set(s for s in signals if s != "HOLD")) > 1) or (max(scores) - min(scores) > 0.55 if scores else False)
+        has_conflict = (max(scores)-min(scores) > 0.5) if scores else False
         if has_conflict:
-            st.markdown("""
-            <div style="background:rgba(255,111,0,0.12);border-left:4px solid #ff6f00;padding:0.7rem 1rem;border-radius:8px;margin-bottom:1rem">
-                ⚡ <b>Agents disagree</b> — synthesis resolved via confidence weighting + your risk profile.
-            </div>
-            """, unsafe_allow_html=True)
+            st.markdown('<div style="background:rgba(249,115,22,0.1);border-left:3px solid #f97316;padding:0.5rem 0.8rem;border-radius:8px;margin-bottom:0.6rem;font-size:0.9rem">⚡ Agents disagree — Chair resolved via confidence + your risk profile. No fake certainty.</div>', unsafe_allow_html=True)
 
-        a_cols = st.columns(3)
-        colors = ["#7c4dff", "#00bcd4", "#ff9800"]
+        # 5 agents in a responsive row
+        colors = {"MomentumAgent":"#818cf8","FlowAgent":"#22d3ee","FilingAgent":"#a78bfa","SentimentAgent":"#fbbf24","RiskBehaviorAgent":"#f472b6"}
+        n = len(agents)
+        acols = st.columns(min(n, 5))
         for i, a in enumerate(agents):
-            with a_cols[i]:
-                conflict_cls = "agent-conflict" if has_conflict and a["signal"] != sig else ""
+            with acols[i % len(acols)]:
+                conf_cls = "acard-conflict" if has_conflict and a["signal"] != sig else ""
+                col = colors.get(a["agent_name"], "#6366f1")
                 st.markdown(f"""
-                <div class="agent-card {conflict_cls}">
-                    <div style="font-weight:700;font-size:1.05rem;color:{colors[i]}">{a['agent_name']}</div>
-                    <div style="font-size:1.2rem;font-weight:700;margin:0.4rem 0">{a['signal']}
-                        <span style="font-size:0.85rem;color:#8b949e">({a['score']:+.2f} · {a['confidence']:.0%})</span>
+                <div class="acard {conf_cls}">
+                    <div style="font-weight:700;color:{col};font-size:0.9rem">{a['agent_name'].replace('Agent','')}</div>
+                    <div style="font-size:1.1rem;font-weight:700;margin:0.25rem 0">{a['signal']}
+                        <span style="font-size:0.78rem;color:#64748b">{a['score']:+.2f} · {a['confidence']:.0%}</span>
                     </div>
-                    <div style="font-size:0.88rem;color:#c9d1d9;line-height:1.45">{a['reasoning'][:280]}…</div>
+                    <div style="font-size:0.8rem;color:#94a3b8;line-height:1.4">{a['reasoning'][:200]}…</div>
                 </div>
                 """, unsafe_allow_html=True)
                 if a.get("key_factors"):
-                    for f in a["key_factors"][:3]:
-                        st.markdown(f"<span style='font-size:0.82rem'>▸ {f}</span>", unsafe_allow_html=True)
+                    for f in a["key_factors"][:2]:
+                        st.caption(f"▸ {f}")
                 if a.get("citations"):
-                    for c in a["citations"][:1]:
-                        st.markdown(f"<div class='citation'>📎 {c['source']}<br/>{c['snippet'][:120]}…</div>", unsafe_allow_html=True)
+                    c = a["citations"][0]
+                    st.markdown(f"<div class='citation'>{c.get('source','')[:50]}</div>", unsafe_allow_html=True)
 
+        # Score bars
         fig = go.Figure(go.Bar(
             x=[a["score"] for a in agents],
-            y=[a["agent_name"].replace("Agent", "") for a in agents],
-            orientation="h", marker_color=colors,
+            y=[a["agent_name"].replace("Agent","") for a in agents],
+            orientation="h",
+            marker_color=[colors.get(a["agent_name"],"#6366f1") for a in agents],
             text=[f"{a['score']:+.2f}" for a in agents], textposition="auto"
         ))
-        fig.update_layout(title="Agent Score Spectrum", paper_bgcolor="rgba(0,0,0,0)",
-                          plot_bgcolor="rgba(0,0,0,0)", font_color="#c9d1d9", height=240,
-                          xaxis=dict(range=[-1, 1], gridcolor="#21262d"), margin=dict(t=40, b=10, l=10, r=10))
+        fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", font_color="#94a3b8",
+                          height=220, xaxis=dict(range=[-1,1], gridcolor="#1e1e2e"), margin=dict(t=10,b=10,l=10,r=10),
+                          title=dict(text="Chair view — agent scores", font=dict(size=13)))
         st.plotly_chart(fig, use_container_width=True)
 
-        with st.expander("🔍 Full Transparent Reasoning Chain", expanded=True):
+        with st.expander("Full reasoning chain (Chair)", expanded=False):
             for step in syn.get("reasoning_chain", []):
                 st.markdown(f"- {step}")
 
-        st.markdown("### Session Metrics")
-        m1, m2, m3, m4 = st.columns(4)
-        m1.metric("Agents OK", f"{metrics['num_agents_succeeded']}/3")
-        m2.metric("Portfolio HHI", metrics["portfolio_risk_concentration"])
-        m3.metric("Final Confidence", f"{metrics['final_confidence']:.0%}")
-        m4.metric("Session", result["session_id"][-8:])
-
-        if st.button("📄 Export Research Memo (PDF)", type="primary"):
+        if st.button("Export research memo (PDF)", type="primary"):
             path = export_research_memo(result, profile.name)
             with open(path, "rb") as f:
-                mime = "application/pdf" if path.suffix == ".pdf" else "text/plain"
-                st.download_button("⬇ Download Memo", f, file_name=path.name, mime=mime)
-            st.success(f"Ready → {path.name}")
+                st.download_button("Download", f, file_name=path.name,
+                                   mime="application/pdf" if path.suffix==".pdf" else "text/plain")
     else:
         st.markdown("""
-        <div class="glass" style="text-align:center;padding:2.5rem">
-            <div style="font-size:2.5rem;margin-bottom:0.5rem">◈</div>
-            <div style="font-size:1.3rem;font-weight:600">Ready when you are</div>
-            <div style="color:#8b949e;margin-top:0.4rem">
-                Enter a ticker and launch the agent team.<br>
-                Your portfolio and risk profile shape every recommendation.
+        <div class="glass" style="text-align:center;padding:2rem">
+            <div style="font-size:1.8rem;margin-bottom:0.3rem">◈</div>
+            <div style="font-weight:600;font-size:1.15rem">Agent desk is ready</div>
+            <div style="color:#64748b;margin-top:0.3rem;font-size:0.9rem">
+                Momentum · Flow · Filing · Sentiment · Risk → Chair<br>
+                Enter a ticker and run. Your profile shapes every output.
             </div>
         </div>
         """, unsafe_allow_html=True)
 
 
-def main_app():
+# ═══════════════════════════════════════════════════════════
+# OTHER PAGES
+# ═══════════════════════════════════════════════════════════
+def compare_page(user_id, profile):
+    st.markdown("### Multi-ticker desk")
+    default = ",".join((profile.watchlist or ["RELIANCE.NS","TCS.NS","HDFCBANK.NS"])[:3])
+    raw = st.text_input("Tickers", value=default)
+    tickers = [t.strip().upper() for t in raw.split(",") if t.strip()]
+    tickers = [t if t.endswith((".NS",".BO")) else t+".NS" for t in tickers]
+    if st.button("Run comparison", type="primary") and tickers:
+        results = []
+        bar = st.progress(0)
+        for i,t in enumerate(tickers[:4]):
+            bar.progress((i)/max(len(tickers),1), text=t)
+            results.append(run_pipeline(t, user_id=user_id))
+        bar.empty()
+        rows = [{"Ticker":r["ticker"].replace(".NS",""), "Signal":r["synthesis"]["final_signal"],
+                 "Score":r["synthesis"]["score"], "Conf":f"{r['synthesis']['confidence']:.0%}",
+                 "Hint":f"{r['synthesis']['position_hint_pct']:+.1f}%"} for r in results]
+        st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+        fig = go.Figure(go.Bar(x=[r["ticker"].replace(".NS","") for r in results],
+                               y=[r["synthesis"]["score"] for r in results],
+                               marker_color=["#34d399" if s>0.2 else "#f87171" if s<-0.2 else "#fbbf24"
+                                             for s in [r["synthesis"]["score"] for r in results]]))
+        fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", font_color="#94a3b8",
+                          height=300, yaxis=dict(range=[-1,1], gridcolor="#1e1e2e"), margin=dict(t=20,b=20))
+        st.plotly_chart(fig, use_container_width=True)
+
+
+def history_page(profile):
+    st.markdown("### Decision history")
+    if not profile.past_decisions:
+        st.info("Run analyses to build history.")
+    for d in profile.past_decisions[:20]:
+        with st.expander(f"{d.get('ticker','?')} → {d.get('signal','?')} · {str(d.get('timestamp',''))[:16]}"):
+            st.write(d.get("recommendation",""))
+            st.caption(f"Conf {d.get('confidence',0):.0%} · Score {d.get('score',0):+.2f}")
+
+
+def about_page():
+    st.markdown("### Agent roles")
+    st.markdown("""
+| Agent | Role | What it does |
+|-------|------|----------------|
+| **Momentum** | Technicals | Price trend, RSI, 20/50 DMA, breakouts. Classified signal + confidence. |
+| **Flow** | Volume & money | Volume spikes, participation, retail-trap detection. |
+| **Filing** | Fundamentals + RAG | Semantic search over SEBI filings & earnings transcripts. Every claim cited. |
+| **Sentiment** | Narrative | Tone, management language, crowding. Hype vs substance. |
+| **Risk & Behavior** | You | Your profile + portfolio. Can downgrade or refuse (FOMO, concentration, F&O). |
+| **Chair (Quorum)** | Synthesis | Weighs all five, surfaces agreement & dissent, writes the memo. Never averages conflict into fake certainty. |
+    """)
+    arch = ROOT / "docs" / "ARCHITECTURE.md"
+    if arch.exists():
+        with st.expander("Full architecture"):
+            st.markdown(arch.read_text())
+
+
+# ═══════════════════════════════════════════════════════════
+# ROUTER + STATIC SIDEBAR
+# ═══════════════════════════════════════════════════════════
+def main():
     user = st.session_state["user"]
     profile = get_profile(user["username"])
 
     with st.sidebar:
-        st.markdown('<div class="logo" style="font-size:1.4rem;margin-bottom:0.3rem">FinAgentVerse</div>', unsafe_allow_html=True)
-        st.caption(f"{user['display_name']} · @{user['username']}")
-        st.markdown(f"`{profile.risk_tolerance}` · max {profile.max_position_pct}%")
+        st.markdown('<div class="fnx-logo">FinNexus</div>', unsafe_allow_html=True)
+        st.markdown('<div class="fnx-tag">Multi-agent intelligence</div>', unsafe_allow_html=True)
+        st.markdown(f"**{user['display_name']}**")
+        st.caption(f"@{user['username']} · {profile.risk_tolerance}")
         st.markdown("---")
-        page = st.radio("Navigate",
-                        ["🔍 Analyze", "📊 Compare", "💼 Portfolio", "🌐 Market Pulse", "📜 History", "💬 Ask", "ℹ️ About"],
+        page = st.radio("Nav", ["Analyze", "Compare", "Portfolio", "History", "About"],
                         label_visibility="collapsed")
         st.markdown("---")
-        if st.button("Logout", use_container_width=True):
+        st.caption("Momentum · Flow · Filing\nSentiment · Risk → Chair")
+        st.markdown("")
+        if st.button("Sign out", use_container_width=True):
             for k in list(st.session_state.keys()):
                 del st.session_state[k]
             st.rerun()
 
-    if page == "🔍 Analyze":
+    if page == "Analyze":
         analyze_page(user, profile)
-    elif page == "📊 Compare":
-        multi_ticker_view(user["username"], profile)
-    elif page == "💼 Portfolio":
-        portfolio_editor(profile)
-    elif page == "🌐 Market Pulse":
-        market_pulse()
-    elif page == "📜 History":
-        st.markdown("## Decision History")
-        if not profile.past_decisions:
-            st.info("No history yet. Run analyses to build your track record.")
-        else:
-            for d in profile.past_decisions[:20]:
-                with st.expander(f"{d.get('ticker','?')} → **{d.get('signal','?')}** · {str(d.get('timestamp',''))[:16]}"):
-                    st.write(d.get("recommendation", ""))
-                    st.caption(f"Conf {d.get('confidence',0):.0%} · Score {d.get('score',0):+.2f}")
-    elif page == "💬 Ask":
-        st.markdown("## Ask the Agent Team")
-        q = st.text_input("Question", placeholder="Should I increase my TCS position given my conservative profile?")
-        if st.button("Ask", type="primary") and q:
-            ticker = "RELIANCE.NS"
-            for t in ["RELIANCE", "TCS", "HDFCBANK", "INFY", "SBIN", "WIPRO", "ICICIBANK"]:
-                if t.lower() in q.lower():
-                    ticker = t + ".NS"
-                    break
-            with st.spinner(f"Routing to agents on {ticker}…"):
-                result = run_pipeline(ticker, user_id=user["username"])
-            syn = result["synthesis"]
-            badge = "badge-buy" if "BUY" in syn["final_signal"] else ("badge-sell" if "SELL" in syn["final_signal"] else "badge-hold")
-            st.markdown(f'<span class="{badge}">{syn["final_signal"]}</span>', unsafe_allow_html=True)
-            st.markdown(syn["recommendation"])
-            with st.expander("Reasoning"):
-                for s in syn["reasoning_chain"]:
-                    st.markdown(f"- {s}")
+    elif page == "Compare":
+        compare_page(user["username"], profile)
+    elif page == "Portfolio":
+        portfolio_page(profile)
+    elif page == "History":
+        history_page(profile)
     else:
-        st.markdown("## Architecture")
-        arch = ROOT / "docs" / "ARCHITECTURE.md"
-        if arch.exists():
-            st.markdown(arch.read_text())
-        st.markdown("---")
-        st.markdown("Built for **HACKVERSE: INTO THE WEB · Sprint 1 · PS-01**")
+        about_page()
 
 
 if "user" not in st.session_state:
     login_page()
 else:
-    main_app()
+    main()

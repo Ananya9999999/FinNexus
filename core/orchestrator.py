@@ -1,20 +1,22 @@
-"""Multi-agent orchestrator – parallel dispatch + synthesis + logging."""
+"""FinNexus multi-agent orchestrator — parallel dispatch + Chair synthesis."""
 
 from __future__ import annotations
 import time
 import json
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 from datetime import datetime
 
 from core.market_data import fetch_market_snapshot, MarketSnapshot
 from core.user_profile import UserProfile, get_profile
 from agents.technical import run_technical_agent
+from agents.flow import run_flow_agent
 from agents.fundamental_rag import run_fundamental_rag_agent
 from agents.sentiment import run_sentiment_agent
+from agents.risk_behavior import run_risk_behavior_agent
 from agents.synthesizer import synthesize
-from agents.base import AgentOutput
+from agents.base import AgentOutput, SignalLabel
 
 LOG_DIR = Path(__file__).parent.parent / "logs"
 LOG_DIR.mkdir(parents=True, exist_ok=True)
@@ -22,62 +24,68 @@ LOG_DIR.mkdir(parents=True, exist_ok=True)
 
 def run_pipeline(
     ticker: str,
-    user_id: str = "moderate_priya",
+    user_id: str = "priya",
     force_degraded: bool = False,
 ) -> Dict[str, Any]:
-    """End-to-end: data → parallel agents → synthesis → metrics."""
     session_id = datetime.utcnow().strftime("%Y%m%dT%H%M%S")
     t_start = time.time()
-
     profile = get_profile(user_id)
 
-    # 1. Market data (with optional forced degradation for demo)
     if force_degraded:
         from core.market_data import _synthetic_snapshot
-        snapshot = _synthetic_snapshot(ticker if ticker.endswith(".NS") else ticker + ".NS", reason="forced degraded demo")
+        clean = ticker if ticker.endswith((".NS", ".BO")) else ticker + ".NS"
+        snapshot = _synthetic_snapshot(clean, reason="forced degraded demo")
     else:
         snapshot = fetch_market_snapshot(ticker)
 
-    # 2. Parallel agent execution (min 3 specialized agents)
+    # Five specialized agents in parallel
     agent_fns = [
-        ("technical", lambda: run_technical_agent(snapshot)),
-        ("fundamental_rag", lambda: run_fundamental_rag_agent(snapshot)),
-        ("sentiment", lambda: run_sentiment_agent(snapshot)),
+        ("Momentum", lambda: run_technical_agent(snapshot)),
+        ("Flow", lambda: run_flow_agent(snapshot)),
+        ("Filing", lambda: run_fundamental_rag_agent(snapshot)),
+        ("Sentiment", lambda: run_sentiment_agent(snapshot)),
+        ("RiskBehavior", lambda: run_risk_behavior_agent(snapshot, profile)),
     ]
 
     agent_outputs: List[AgentOutput] = []
-    with ThreadPoolExecutor(max_workers=3) as ex:
+    with ThreadPoolExecutor(max_workers=5) as ex:
         futures = {ex.submit(fn): name for name, fn in agent_fns}
         for fut in as_completed(futures):
             name = futures[fut]
             try:
-                out = fut.result(timeout=15)
+                out = fut.result(timeout=12)
+                # Normalize display names
+                rename = {
+                    "TechnicalSignalAgent": "MomentumAgent",
+                    "FlowAgent": "FlowAgent",
+                    "FundamentalRAGAgent": "FilingAgent",
+                    "SentimentMacroAgent": "SentimentAgent",
+                    "RiskBehaviorAgent": "RiskBehaviorAgent",
+                }
+                out.agent_name = rename.get(out.agent_name, out.agent_name)
                 agent_outputs.append(out)
             except Exception as e:
-                # Graceful degradation: still produce a placeholder
-                from agents.base import SignalLabel
                 agent_outputs.append(AgentOutput(
-                    agent_name=name,
+                    agent_name=name + "Agent",
                     role="failed",
                     signal=SignalLabel.HOLD,
                     confidence=0.1,
                     score=0.0,
-                    reasoning=f"Agent failed: {type(e).__name__}: {e}",
+                    reasoning=f"Agent failed: {type(e).__name__}",
                     degraded=True,
                     error=str(e),
                     latency_ms=0,
                 ))
 
-    # Ensure order roughly technical, fundamental, sentiment
-    order = {"TechnicalSignalAgent": 0, "FundamentalRAGAgent": 1, "SentimentMacroAgent": 2}
+    order = {
+        "MomentumAgent": 0, "FlowAgent": 1, "FilingAgent": 2,
+        "SentimentAgent": 3, "RiskBehaviorAgent": 4,
+    }
     agent_outputs.sort(key=lambda a: order.get(a.agent_name, 99))
 
-    # 3. Synthesis with user profile
     synthesis = synthesize(agent_outputs, snapshot, profile)
-
     total_latency = round((time.time() - t_start) * 1000, 1)
 
-    # 4. Performance metrics (at least 3)
     metrics = {
         "session_id": session_id,
         "ticker": snapshot.ticker,
@@ -87,9 +95,8 @@ def run_pipeline(
         "data_quality": snapshot.data_quality,
         "num_agents_succeeded": sum(1 for a in agent_outputs if not a.error),
         "signal_agreement": synthesis.get("agreement", 0),
-        "portfolio_risk_concentration": _concentration_score(profile),
+        "portfolio_risk_concentration": profile.concentration_hhi(),
         "final_confidence": synthesis["confidence"],
-        # Proxy for "signal accuracy" – in real system would track forward returns; here we log the score magnitude as conviction proxy
         "conviction_score": abs(synthesis["score"]),
     }
 
@@ -111,14 +118,12 @@ def run_pipeline(
         "full_reasoning_chain_visible": True,
     }
 
-    # Persist log
-    log_path = LOG_DIR / f"{session_id}_{snapshot.ticker.replace('.', '_')}.json"
     try:
+        log_path = LOG_DIR / f"{session_id}_{snapshot.ticker.replace('.', '_')}.json"
         log_path.write_text(json.dumps(result, indent=2, default=str))
     except Exception:
         pass
 
-    # Save to user decision history
     try:
         from core.user_profile import add_decision_to_history
         add_decision_to_history(user_id, {
@@ -135,11 +140,5 @@ def run_pipeline(
     return result
 
 
-def _concentration_score(profile: UserProfile) -> float:
-    """Simple Herfindahl-style concentration (0-1, higher = more concentrated)."""
-    return profile.concentration_hhi()
-
-
 def demo_degraded_scenario(ticker: str = "RELIANCE.NS", user_id: str = "priya") -> Dict[str, Any]:
-    """Explicit degraded-data demo path required by PS."""
     return run_pipeline(ticker, user_id=user_id, force_degraded=True)

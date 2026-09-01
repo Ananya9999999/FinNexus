@@ -1,29 +1,21 @@
-# FinAgentVerse
+# FinNexus
 
-**Multi-Agent Autonomous Financial Intelligence System for Retail Investors**
+**Multi-Agent Autonomous Financial Intelligence for Retail Investors**
 
-HACKVERSE: INTO THE WEB · Sprint 1 · PS-01  
-IEEE RAS VIT Chennai · 2026
+HACKVERSE 2026 · PS-01
 
-## Features
+## Agent Desk
 
-- **Authentication** — Login / Register (local JSON). Demo accounts ready.
-- **Personal Portfolio Editor** — Add/edit/remove holdings (qty, avg price, weight %), risk tolerance, horizon, behavioral flags, cash %.
-- **3 Parallel Specialized Agents**
-  - Technical Signal (momentum + volume anomaly + RSI/MACD)
-  - Fundamental RAG (SEBI filings & earnings transcripts + citations)
-  - Sentiment / Macro
-- **Synthesis Layer** — Confidence-weighted fusion + risk profile + behavioral dampening + concentration checks
-- **Portfolio Impact Simulator** — See how recommendation changes your weights, cash, HHI, risk score
-- **Agent Debate View** — Conflicts between agents highlighted
-- **What-If Risk Toggle** — Instantly re-run under conservative / moderate / aggressive
-- **Decision History** — Per-user past recommendations
-- **PDF Research Memo Export**
-- **Chat-style Ask Agents** routing
-- **Graceful degraded-data path**
-- Full transparent reasoning chain
+| Agent | Role |
+|-------|------|
+| Momentum | Technicals — trend, RSI, DMA, breakouts |
+| Flow | Volume & money — spikes, retail-trap detection |
+| Filing | Fundamentals + RAG — SEBI filings, earnings, citations |
+| Sentiment | Narrative — tone, crowding, hype vs substance |
+| Risk & Behavior | Your profile — FOMO, concentration, F&O guardrails |
+| Chair (Quorum) | Synthesis — agreement, dissent, memo. No fake certainty |
 
-## Quick Start (Windows PowerShell)
+## Run (Windows PowerShell)
 
 ```powershell
 cd D:\FinNexus
@@ -32,23 +24,22 @@ $env:PYTHONPATH = "."
 streamlit run app.py
 ```
 
-## Demo Accounts
+## Demo accounts
 
-| Username | Password   | Profile      |
-|----------|------------|--------------|
-| riya     | demo123    | Conservative |
-| arjun    | demo123    | Aggressive   |
-| priya    | demo123    | Moderate     |
-| judge    | hackverse  | Empty (fresh)|
+| User | Pass | Style |
+|------|------|-------|
+| riya | demo123 | Conservative |
+| arjun | demo123 | Aggressive |
+| priya | demo123 | Moderate |
+| judge | hackverse | Fresh |
 
-## Project Layout
+## Features
 
-```
-finagent/
-├── app.py
-├── agents/
-├── core/   (auth, user_profile, market_data, vector_store, orchestrator, portfolio_impact, pdf_export)
-├── data/
-├── docs/ARCHITECTURE.md
-└── requirements.txt
-```
+- 5 parallel agents + Chair synthesis
+- Personal portfolio editor + impact simulator
+- Multi-ticker comparison
+- What-if risk toggle
+- Full transparent reasoning chain
+- PDF research memo
+- Degraded-data path
+- Zero artificial lag on analysis
