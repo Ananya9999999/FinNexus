@@ -118,20 +118,28 @@ def run_pipeline(
     except Exception:
         pass
 
+    # Save to user decision history
+    try:
+        from core.user_profile import add_decision_to_history
+        add_decision_to_history(user_id, {
+            "session_id": session_id,
+            "ticker": snapshot.ticker,
+            "signal": synthesis["final_signal"],
+            "confidence": synthesis["confidence"],
+            "score": synthesis["score"],
+            "recommendation": synthesis.get("recommendation", "")[:200],
+        })
+    except Exception:
+        pass
+
     return result
 
 
 def _concentration_score(profile: UserProfile) -> float:
     """Simple Herfindahl-style concentration (0-1, higher = more concentrated)."""
-    weights = list(profile.holdings.values())
-    if not weights:
-        return 0.0
-    total = sum(weights) + 1e-9
-    shares = [w / total for w in weights]
-    hhi = sum(s ** 2 for s in shares)
-    return round(hhi, 3)
+    return profile.concentration_hhi()
 
 
-def demo_degraded_scenario(ticker: str = "RELIANCE.NS", user_id: str = "moderate_priya") -> Dict[str, Any]:
+def demo_degraded_scenario(ticker: str = "RELIANCE.NS", user_id: str = "priya") -> Dict[str, Any]:
     """Explicit degraded-data demo path required by PS."""
     return run_pipeline(ticker, user_id=user_id, force_degraded=True)

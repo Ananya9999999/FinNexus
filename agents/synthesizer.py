@@ -67,7 +67,7 @@ def synthesize(
         behavioral_notes.append("Loss-averse flag: SELL signal softened")
 
     # Portfolio concentration check
-    current_weight = profile.holdings.get(snapshot.ticker, 0.0)
+    current_weight = profile.get_holding_weight(snapshot.ticker)
     concentration_warning = ""
     if current_weight > profile.max_position_pct * 0.8 and adj_score > 0:
         adj_score *= 0.7

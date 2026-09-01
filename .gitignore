@@ -1,0 +1,66 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# IDE / Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.pydevproject
+.settings/
+
+# Streamlit
+.streamlit/secrets.toml
+
+# Project data & logs (local / generated)
+logs/
+data/users.json
+data/user_profiles.json
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Model caches (sentence-transformers / HF)
+.cache/
+*.bin
+*.pt
+*.onnx
+
+# Misc
+*.pdf
+!docs/**
+.env
+.env.*
